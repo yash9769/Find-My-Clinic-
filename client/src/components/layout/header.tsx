@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Menu, X, MapPin, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 
 export default function Header() {
@@ -16,7 +17,7 @@ export default function Header() {
   ];
 
   return (
-    <nav className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-gray-100 z-50">
+    <nav className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-50">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Logo and brand */}
@@ -26,8 +27,8 @@ export default function Header() {
               <Stethoscope className="text-white h-3 w-3 absolute -top-0.5 -right-0.5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Find My Clinic</h1>
-              <p className="text-xs text-gray-600">In need of care? We'll get you there.</p>
+              <h1 className="text-xl font-bold text-foreground">Find My Clinic</h1>
+              <p className="text-xs text-muted-foreground">In need of care? We'll get you there.</p>
             </div>
           </Link>
 
@@ -38,7 +39,7 @@ export default function Header() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "text-gray-700 hover:text-primary transition-colors",
+                  "text-foreground hover:text-primary transition-colors",
                   location === item.href && "text-primary font-medium"
                 )}
                 data-testid={`nav-${item.name.toLowerCase().replace(' ', '-')}`}
@@ -46,11 +47,14 @@ export default function Header() {
                 {item.name}
               </Link>
             ))}
-            <Link href="/patients">
-              <Button className="bg-accent text-white hover:bg-orange-600" data-testid="button-find-clinic">
-                Find a Clinic
-              </Button>
-            </Link>
+            <div className="flex items-center space-x-3">
+              <ThemeToggle />
+              <Link href="/patients">
+                <Button className="bg-accent text-white hover:bg-orange-600" data-testid="button-find-clinic">
+                  Find a Clinic
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -60,23 +64,23 @@ export default function Header() {
             data-testid="button-mobile-menu"
           >
             {isMenuOpen ? (
-              <X className="h-6 w-6 text-gray-700" />
+              <X className="h-6 w-6 text-foreground" />
             ) : (
-              <Menu className="h-6 w-6 text-gray-700" />
+              <Menu className="h-6 w-6 text-foreground" />
             )}
           </button>
         </div>
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t border-gray-100">
+          <div className="md:hidden mt-4 pb-4 border-t border-border">
             <div className="pt-4 space-y-3">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    "block text-gray-700 hover:text-primary transition-colors py-2",
+                    "block text-foreground hover:text-primary transition-colors py-2",
                     location === item.href && "text-primary font-medium"
                   )}
                   onClick={() => setIsMenuOpen(false)}
@@ -85,6 +89,9 @@ export default function Header() {
                   {item.name}
                 </Link>
               ))}
+              <div className="flex items-center justify-center mt-4">
+                <ThemeToggle />
+              </div>
               <Link href="/patients" onClick={() => setIsMenuOpen(false)}>
                 <Button className="w-full bg-accent text-white hover:bg-orange-600 mt-4" data-testid="mobile-button-find-clinic">
                   Find a Clinic

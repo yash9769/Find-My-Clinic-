@@ -1,14 +1,15 @@
-import { Goal, Eye, Heart, Users } from "lucide-react";
+import { Goal, Eye, Heart, Users, Award, Lightbulb, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import TeamMember from "@/components/ui/team-member";
 import type { TeamMember as TeamMemberType } from "@/lib/types";
+import yashodhanPhoto from "@assets/my photo_1756052641439.jpg";
 
 export default function About() {
   const teamMembers: TeamMemberType[] = [
     {
       name: "Yashodhan Rajapkar",
       role: "Founder & Lead Developer",
-      image: "@assets/my photo_1756052641439.jpg",
+      image: yashodhanPhoto,
     },
   ];
 

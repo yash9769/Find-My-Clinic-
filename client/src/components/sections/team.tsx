@@ -1,12 +1,13 @@
 import TeamMember from "@/components/ui/team-member";
 import type { TeamMember as TeamMemberType } from "@/lib/types";
+import yashodhanPhoto from "@assets/my photo_1756052641439.jpg";
 
 export default function Team() {
   const teamMembers: TeamMemberType[] = [
     {
       name: "Yashodhan Rajapkar",
       role: "Founder & Lead Developer",
-      image: "@assets/my photo_1756052641439.jpg",
+      image: yashodhanPhoto,
     },
   ];
 

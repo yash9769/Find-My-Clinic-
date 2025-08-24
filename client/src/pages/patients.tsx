@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Search, MapPin, Clock, Users, Plus } from "lucide-react";
+import { Search, MapPin, Clock, Users, Plus, Filter, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPatientSchema, insertQueueTokenSchema } from "@shared/schema";
@@ -14,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import type { Clinic } from "@shared/schema";
+import LocationSelector from "@/components/sections/location-selector";
 
 const patientFormSchema = insertPatientSchema.extend({
   email: z.string().email().optional().or(z.literal("")),
@@ -21,16 +23,29 @@ const patientFormSchema = insertPatientSchema.extend({
 
 export default function Patients() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: clinics = [], isLoading } = useQuery({
-    queryKey: ["/api/clinics", searchQuery],
+    queryKey: ["/api/clinics", searchQuery, selectedArea],
     queryFn: async () => {
-      const url = searchQuery 
-        ? `/api/clinics?search=${encodeURIComponent(searchQuery)}`
-        : "/api/clinics";
+      let url = "/api/clinics";
+      const params = new URLSearchParams();
+      
+      if (searchQuery) {
+        params.append("search", searchQuery);
+      }
+      if (selectedArea) {
+        params.append("area", selectedArea);
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch clinics");
       return response.json();
