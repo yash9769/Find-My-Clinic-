@@ -7,23 +7,8 @@ export default function About() {
   const teamMembers: TeamMemberType[] = [
     {
       name: "Yashodhan Rajapkar",
-      role: "Co-Founder & Lead Developer",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300",
-    },
-    {
-      name: "Madhura Patil",
-      role: "Co-Founder & UX Designer",
-      image: "https://images.unsplash.com/photo-1494790108755-2616b612b093?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300",
-    },
-    {
-      name: "Kaivalya Gharat",
-      role: "Co-Founder & Backend Engineer",
-      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300",
-    },
-    {
-      name: "Swarali Mahishi",
-      role: "Co-Founder & Product Manager",
-      image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300",
+      role: "Founder & Lead Developer",
+      image: "@assets/my photo_1756052641439.jpg",
     },
   ];
 
@@ -55,7 +40,7 @@ export default function About() {
               </p>
             </div>
             
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="flex justify-center">
               {teamMembers.map((member, index) => (
                 <TeamMember
                   key={index}

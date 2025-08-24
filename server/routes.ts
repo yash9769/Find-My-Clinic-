@@ -126,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const totalTokens = allTokens.flat().length;
       const avgWaitTime = clinics.length > 0 
-        ? Math.round(clinics.reduce((sum, clinic) => sum + clinic.currentWaitTime, 0) / clinics.length)
+        ? Math.round(clinics.reduce((sum, clinic) => sum + (clinic.currentWaitTime || 0), 0) / clinics.length)
         : 0;
       
       res.json({

@@ -38,7 +38,7 @@ export default function CTA() {
           </div>
           
           <div className="mt-8 text-sm opacity-75">
-            <p>Have questions? <a href="mailto:contact@findmyclinic.com" className="underline hover:no-underline">Contact our team</a></p>
+            <p>Have questions? <a href="mailto:yashodhan.rajapkar@gmail.com" className="underline hover:no-underline">Contact our team</a></p>
           </div>
         </div>
       </div>

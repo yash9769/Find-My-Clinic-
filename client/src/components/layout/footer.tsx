@@ -67,13 +67,13 @@ export default function Footer() {
               <ul className="space-y-2 text-gray-400">
                 <li className="flex items-center">
                   <Mail className="h-4 w-4 mr-2" />
-                  <a href="mailto:contact@findmyclinic.com" className="hover:text-white transition-colors" data-testid="contact-email">
-                    contact@findmyclinic.com
+                  <a href="mailto:yashodhan.rajapkar@gmail.com" className="hover:text-white transition-colors" data-testid="contact-email">
+                    yashodhan.rajapkar@gmail.com
                   </a>
                 </li>
                 <li className="flex items-center">
                   <Phone className="h-4 w-4 mr-2" />
-                  <span data-testid="contact-phone">+1 (555) 123-4567</span>
+                  <span data-testid="contact-phone">+91 9769503670</span>
                 </li>
               </ul>
             </div>

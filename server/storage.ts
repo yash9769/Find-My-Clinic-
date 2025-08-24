@@ -52,12 +52,12 @@ export class MemStorage implements IStorage {
     const sampleClinics: Clinic[] = [
       {
         id: randomUUID(),
-        name: "City General Clinic",
-        address: "123 Main St, Downtown",
-        phone: "+1 (555) 123-4567",
-        email: "info@citygeneralclinic.com",
-        latitude: "40.7128",
-        longitude: "-74.0060",
+        name: "Bandra General Clinic",
+        address: "SV Road, Bandra West, Mumbai",
+        phone: "+91 98765 43210",
+        email: "info@bandrageneralclinic.com",
+        latitude: "19.0596",
+        longitude: "72.8295",
         currentWaitTime: 15,
         queueSize: 8,
         status: "open",
@@ -66,12 +66,12 @@ export class MemStorage implements IStorage {
       },
       {
         id: randomUUID(),
-        name: "MedCare Center",
-        address: "456 Oak Avenue",
-        phone: "+1 (555) 234-5678",
-        email: "contact@medcarecenter.com",
-        latitude: "40.7580",
-        longitude: "-73.9855",
+        name: "Andheri MedCare Center",
+        address: "JP Road, Andheri West, Mumbai",
+        phone: "+91 98765 43211",
+        email: "contact@andherimedcare.com",
+        latitude: "19.1136",
+        longitude: "72.8697",
         currentWaitTime: 45,
         queueSize: 23,
         status: "busy",
@@ -81,11 +81,11 @@ export class MemStorage implements IStorage {
       {
         id: randomUUID(),
         name: "Wellness Family Practice",
-        address: "789 Pine Street",
-        phone: "+1 (555) 345-6789",
+        address: "Linking Road, Khar West, Mumbai",
+        phone: "+91 98765 43212",
         email: "hello@wellnessfp.com",
-        latitude: "40.7282",
-        longitude: "-74.0776",
+        latitude: "19.0728",
+        longitude: "72.8342",
         currentWaitTime: 25,
         queueSize: 12,
         status: "open",
@@ -95,11 +95,11 @@ export class MemStorage implements IStorage {
       {
         id: randomUUID(),
         name: "Quick Care Clinic",
-        address: "321 Elm Road",
-        phone: "+1 (555) 456-7890",
+        address: "Hill Road, Bandra West, Mumbai",
+        phone: "+91 98765 43213",
         email: "info@quickcareclinic.com",
-        latitude: "40.7387",
-        longitude: "-74.0021",
+        latitude: "19.0544",
+        longitude: "72.8181",
         currentWaitTime: 5,
         queueSize: 3,
         status: "open",
@@ -186,7 +186,12 @@ export class MemStorage implements IStorage {
 
   async createPatient(insertPatient: InsertPatient): Promise<Patient> {
     const id = randomUUID();
-    const patient: Patient = { ...insertPatient, id, createdAt: new Date() };
+    const patient: Patient = { 
+      ...insertPatient, 
+      id, 
+      createdAt: new Date(),
+      email: insertPatient.email || null
+    };
     this.patients.set(id, patient);
     return patient;
   }
@@ -208,7 +213,9 @@ export class MemStorage implements IStorage {
       id, 
       createdAt: new Date(),
       calledAt: null,
-      completedAt: null
+      completedAt: null,
+      status: insertToken.status || "waiting",
+      estimatedWaitTime: insertToken.estimatedWaitTime || null
     };
     this.queueTokens.set(id, token);
     
@@ -216,8 +223,8 @@ export class MemStorage implements IStorage {
     const clinic = await this.getClinic(insertToken.clinicId);
     if (clinic) {
       await this.updateClinic(clinic.id, { 
-        queueSize: clinic.queueSize + 1,
-        currentWaitTime: Math.max(clinic.currentWaitTime, token.estimatedWaitTime || 0)
+        queueSize: (clinic.queueSize || 0) + 1,
+        currentWaitTime: Math.max(clinic.currentWaitTime || 0, token.estimatedWaitTime || 0)
       });
     }
     
@@ -245,7 +252,10 @@ export class MemStorage implements IStorage {
     const request: ContactRequest = { 
       ...insertRequest, 
       id, 
-      createdAt: new Date() 
+      createdAt: new Date(),
+      phone: insertRequest.phone || null,
+      message: insertRequest.message || null,
+      clinicName: insertRequest.clinicName || null
     };
     this.contactRequests.set(id, request);
     return request;

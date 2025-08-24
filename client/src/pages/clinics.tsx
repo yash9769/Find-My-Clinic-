@@ -178,7 +178,7 @@ export default function Clinics() {
                           <FormItem>
                             <FormLabel>Phone (Optional)</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter your phone number" {...field} data-testid="input-contact-phone" />
+                              <Input placeholder="Enter your phone number" {...field} value={field.value || ""} data-testid="input-contact-phone" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -194,6 +194,7 @@ export default function Clinics() {
                               <Textarea 
                                 placeholder="Tell us about your clinic's needs..." 
                                 {...field} 
+                                value={field.value || ""}
                                 data-testid="input-contact-message"
                               />
                             </FormControl>
