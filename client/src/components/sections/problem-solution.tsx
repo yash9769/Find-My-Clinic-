@@ -1,4 +1,4 @@
-import { Clock, UserX, AlertTriangle } from "lucide-react";
+import { Clock, UserX, AlertTriangle, MapPin, Smartphone, QrCode } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import FeatureCard from "@/components/ui/feature-card";
 
@@ -29,19 +29,22 @@ export default function ProblemSolution() {
 
   const solutions = [
     {
-      icon: "📍",
+      icon: MapPin,
       title: "Real-Time Clinic Discovery",
       description: "Find nearby clinics instantly with live wait times and availability status.",
+      color: "bg-primary",
     },
     {
-      icon: "📱",
+      icon: Smartphone,
       title: "Digital Queue Management",
       description: "Get your queue token remotely and receive notifications when it's your turn.",
+      color: "bg-secondary",
     },
     {
-      icon: "🔗",
+      icon: QrCode,
       title: "Hybrid QR System",
-      description: "Seamless integration with physical QR standees for accessibility and convenience.",
+      description: "Scan a clinic's QR to view wait times, then receive a personal QR token for a fast, contactless check-in.",
+      color: "bg-success",
     },
   ];
 
@@ -89,8 +92,8 @@ export default function ProblemSolution() {
               <div className="space-y-6">
                 {solutions.map((solution, index) => (
                   <div key={index} className="flex items-start space-x-4" data-testid={`solution-item-${index}`}>
-                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mt-1 text-white text-sm">
-                      {solution.icon}
+                    <div className={`w-8 h-8 ${solution.color} rounded-full flex items-center justify-center flex-shrink-0 mt-1`}>
+                      <solution.icon className="text-white h-4 w-4" />
                     </div>
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-1">{solution.title}</h4>

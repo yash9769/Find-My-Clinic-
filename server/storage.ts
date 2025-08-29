@@ -1,10 +1,32 @@
-import { type User, type InsertUser, type Clinic, type InsertClinic, type Patient, type InsertPatient, type QueueToken, type InsertQueueToken, type ContactRequest, type InsertContactRequest } from "@shared/schema";
+import { 
+  type User, 
+  type InsertUser, 
+  type Clinic, 
+  type InsertClinic, 
+  type Patient, 
+  type InsertPatient, 
+  type QueueToken, 
+  type InsertQueueToken, 
+  type ContactRequest, 
+  type InsertContactRequest,
+  type PatientProfile,
+  type InsertPatientProfile,
+  type PatientQRCode,
+  type InsertPatientQRCode,
+  type AmbulanceRequest,
+  type InsertAmbulanceRequest,
+  type ClinicStaff,
+  type InsertClinicStaff,
+  type QRCodeScan,
+  type InsertQRCodeScan
+} from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  authenticateUser(username: string, password: string): Promise<User | undefined>;
   
   // Clinics
   getClinics(): Promise<Clinic[]>;
@@ -28,6 +50,31 @@ export interface IStorage {
   // Contact Requests
   createContactRequest(request: InsertContactRequest): Promise<ContactRequest>;
   getContactRequests(): Promise<ContactRequest[]>;
+  
+  // Patient Profiles
+  getPatientProfileById(id: string): Promise<PatientProfile | undefined>;
+  getPatientProfileByUserId(userId: string): Promise<PatientProfile | undefined>;
+  createPatientProfile(profile: InsertPatientProfile): Promise<PatientProfile>;
+  updatePatientProfileByUserId(userId: string, updates: Partial<PatientProfile>): Promise<PatientProfile | undefined>;
+  
+  // QR Codes
+  getActiveQRCodeByProfileId(profileId: string): Promise<PatientQRCode | undefined>;
+  createPatientQRCode(qrCode: InsertPatientQRCode): Promise<PatientQRCode>;
+  deactivateQRCodesByProfileId(profileId: string): Promise<void>;
+  incrementQRCodeScanCount(qrCodeId: string): Promise<void>;
+  
+  // Ambulance Requests
+  createAmbulanceRequest(request: InsertAmbulanceRequest): Promise<AmbulanceRequest>;
+  getAmbulanceRequests(): Promise<AmbulanceRequest[]>;
+  getAmbulanceRequestById(id: string): Promise<AmbulanceRequest | undefined>;
+  updateAmbulanceRequestStatus(id: string, status: string, estimatedArrival?: string): Promise<AmbulanceRequest | undefined>;
+  
+  // Clinic Staff
+  getClinicStaffByUserId(userId: string): Promise<ClinicStaff | undefined>;
+  createClinicStaff(staff: InsertClinicStaff): Promise<ClinicStaff>;
+  
+  // QR Code Scans
+  recordQRCodeScan(scan: InsertQRCodeScan): Promise<QRCodeScan>;
 }
 
 export class MemStorage implements IStorage {
@@ -36,6 +83,11 @@ export class MemStorage implements IStorage {
   private patients: Map<string, Patient>;
   private queueTokens: Map<string, QueueToken>;
   private contactRequests: Map<string, ContactRequest>;
+  private patientProfiles: Map<string, PatientProfile>;
+  private patientQRCodes: Map<string, PatientQRCode>;
+  private ambulanceRequests: Map<string, AmbulanceRequest>;
+  private clinicStaff: Map<string, ClinicStaff>;
+  private qrCodeScans: Map<string, QRCodeScan>;
 
   constructor() {
     this.users = new Map();
@@ -43,6 +95,11 @@ export class MemStorage implements IStorage {
     this.patients = new Map();
     this.queueTokens = new Map();
     this.contactRequests = new Map();
+    this.patientProfiles = new Map();
+    this.patientQRCodes = new Map();
+    this.ambulanceRequests = new Map();
+    this.clinicStaff = new Map();
+    this.qrCodeScans = new Map();
     
     // Initialize with sample clinics
     this.initializeSampleData();
@@ -225,6 +282,14 @@ export class MemStorage implements IStorage {
     return user;
   }
 
+  async authenticateUser(username: string, password: string): Promise<User | undefined> {
+    const user = await this.getUserByUsername(username);
+    if (user && user.password === password) {
+      return user;
+    }
+    return undefined;
+  }
+
   async getClinics(): Promise<Clinic[]> {
     return Array.from(this.clinics.values()).filter(clinic => clinic.isActive);
   }
@@ -358,6 +423,184 @@ export class MemStorage implements IStorage {
 
   async getContactRequests(): Promise<ContactRequest[]> {
     return Array.from(this.contactRequests.values());
+  }
+
+  // Patient Profile methods
+  async getPatientProfileById(id: string): Promise<PatientProfile | undefined> {
+    return this.patientProfiles.get(id);
+  }
+
+  async getPatientProfileByUserId(userId: string): Promise<PatientProfile | undefined> {
+    return Array.from(this.patientProfiles.values()).find(
+      (profile) => profile.userId === userId
+    );
+  }
+
+  async createPatientProfile(insertProfile: InsertPatientProfile): Promise<PatientProfile> {
+    const id = randomUUID();
+    const profile: PatientProfile = {
+      ...insertProfile,
+      id,
+      userId: insertProfile.userId || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      dateOfBirth: insertProfile.dateOfBirth || null,
+      gender: insertProfile.gender || null,
+      address: insertProfile.address || null,
+      city: insertProfile.city || null,
+      state: insertProfile.state || null,
+      zipCode: insertProfile.zipCode || null,
+      emergencyContactName: insertProfile.emergencyContactName || null,
+      emergencyContactPhone: insertProfile.emergencyContactPhone || null,
+      emergencyContactRelation: insertProfile.emergencyContactRelation || null,
+      bloodType: insertProfile.bloodType || null,
+      allergies: insertProfile.allergies || null,
+      medications: insertProfile.medications || null,
+      medicalConditions: insertProfile.medicalConditions || null,
+      insuranceProvider: insertProfile.insuranceProvider || null,
+      insurancePolicyNumber: insertProfile.insurancePolicyNumber || null,
+      preferredLanguage: insertProfile.preferredLanguage || "en"
+    };
+    this.patientProfiles.set(id, profile);
+    return profile;
+  }
+
+  async updatePatientProfileByUserId(userId: string, updates: Partial<PatientProfile>): Promise<PatientProfile | undefined> {
+    const profile = await this.getPatientProfileByUserId(userId);
+    if (!profile) return undefined;
+
+    const updatedProfile = {
+      ...profile,
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.patientProfiles.set(profile.id, updatedProfile);
+    return updatedProfile;
+  }
+
+  // QR Code methods
+  async getActiveQRCodeByProfileId(profileId: string): Promise<PatientQRCode | undefined> {
+    return Array.from(this.patientQRCodes.values()).find(
+      (qr) => qr.patientProfileId === profileId && qr.isActive
+    );
+  }
+
+  async createPatientQRCode(insertQRCode: InsertPatientQRCode): Promise<PatientQRCode> {
+    const id = randomUUID();
+    const qrCode: PatientQRCode = {
+      ...insertQRCode,
+      id,
+      createdAt: new Date(),
+      isActive: insertQRCode.isActive ?? true,
+      expiresAt: insertQRCode.expiresAt || null,
+      lastScannedAt: null,
+      scanCount: 0
+    };
+    this.patientQRCodes.set(id, qrCode);
+    return qrCode;
+  }
+
+  async deactivateQRCodesByProfileId(profileId: string): Promise<void> {
+    const entries = Array.from(this.patientQRCodes.entries());
+    for (const [id, qrCode] of entries) {
+      if (qrCode.patientProfileId === profileId) {
+        this.patientQRCodes.set(id, { ...qrCode, isActive: false });
+      }
+    }
+  }
+
+  async incrementQRCodeScanCount(qrCodeId: string): Promise<void> {
+    const qrCode = this.patientQRCodes.get(qrCodeId);
+    if (qrCode) {
+      this.patientQRCodes.set(qrCodeId, {
+        ...qrCode,
+        scanCount: (qrCode.scanCount || 0) + 1,
+        lastScannedAt: new Date()
+      });
+    }
+  }
+
+  // Ambulance Request methods
+  async createAmbulanceRequest(insertRequest: InsertAmbulanceRequest): Promise<AmbulanceRequest> {
+    const id = randomUUID();
+    const request: AmbulanceRequest = {
+      ...insertRequest,
+      id,
+      createdAt: new Date(),
+      patientProfileId: insertRequest.patientProfileId || null,
+      destinationHospital: insertRequest.destinationHospital || null,
+      specialRequirements: insertRequest.specialRequirements || null,
+      insuranceProvider: insertRequest.insuranceProvider || null,
+      status: "requested",
+      estimatedArrival: null,
+      dispatchedAt: null,
+      arrivedAt: null,
+      completedAt: null
+    };
+    this.ambulanceRequests.set(id, request);
+    return request;
+  }
+
+  async getAmbulanceRequests(): Promise<AmbulanceRequest[]> {
+    return Array.from(this.ambulanceRequests.values());
+  }
+
+  async getAmbulanceRequestById(id: string): Promise<AmbulanceRequest | undefined> {
+    return this.ambulanceRequests.get(id);
+  }
+
+  async updateAmbulanceRequestStatus(id: string, status: string, estimatedArrival?: string): Promise<AmbulanceRequest | undefined> {
+    const request = this.ambulanceRequests.get(id);
+    if (!request) return undefined;
+
+    const updates: Partial<AmbulanceRequest> = { status };
+    if (estimatedArrival) {
+      updates.estimatedArrival = estimatedArrival;
+    }
+    if (status === "dispatched") {
+      updates.dispatchedAt = new Date();
+    } else if (status === "arrived") {
+      updates.arrivedAt = new Date();
+    } else if (status === "completed") {
+      updates.completedAt = new Date();
+    }
+
+    const updatedRequest = { ...request, ...updates };
+    this.ambulanceRequests.set(id, updatedRequest);
+    return updatedRequest;
+  }
+
+  // Clinic Staff methods
+  async getClinicStaffByUserId(userId: string): Promise<ClinicStaff | undefined> {
+    return Array.from(this.clinicStaff.values()).find(
+      (staff) => staff.userId === userId
+    );
+  }
+
+  async createClinicStaff(insertStaff: InsertClinicStaff): Promise<ClinicStaff> {
+    const id = randomUUID();
+    const staff: ClinicStaff = {
+      ...insertStaff,
+      id,
+      createdAt: new Date(),
+      phone: insertStaff.phone || null,
+      isActive: insertStaff.isActive ?? true
+    };
+    this.clinicStaff.set(id, staff);
+    return staff;
+  }
+
+  // QR Code Scan methods
+  async recordQRCodeScan(insertScan: InsertQRCodeScan): Promise<QRCodeScan> {
+    const id = randomUUID();
+    const scan: QRCodeScan = {
+      ...insertScan,
+      id,
+      createdAt: new Date(),
+      scanData: insertScan.scanData || null
+    };
+    this.qrCodeScans.set(id, scan);
+    return scan;
   }
 }
 

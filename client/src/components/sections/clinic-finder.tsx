@@ -5,15 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import ClinicCard from "@/components/ui/clinic-card";
 import type { Clinic } from "@shared/schema";
+import { useDebounce } from "@/hooks/use-debounce";
 
-export default function ClinicFinder() {
+export default function FindMyClinic() {
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce input by 500ms
 
   const { data: clinics = [], isLoading } = useQuery({
-    queryKey: ["/api/clinics", searchQuery],
+    queryKey: ["/api/clinics", debouncedSearchQuery],
     queryFn: async () => {
-      const url = searchQuery 
-        ? `/api/clinics?search=${encodeURIComponent(searchQuery)}`
+      const url = debouncedSearchQuery 
+        ? `/api/clinics?search=${encodeURIComponent(debouncedSearchQuery)}`
         : "/api/clinics";
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch clinics");

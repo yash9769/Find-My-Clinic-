@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Clock, Ticket, Bell, CheckCircle, LogIn, Users, RefreshCw, MessageCircle } from "lucide-react";
+import { Search, Clock, Bell, CheckCircle, LogIn, Users, RefreshCw, MessageCircle, QrCode, ScanLine, Hospital } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -9,8 +9,8 @@ export default function HowItWorks() {
   const patientSteps = [
     {
       icon: Search,
-      title: "Discover Clinics",
-      description: "Find nearby clinics on an interactive map",
+      title: "Discover & Scan",
+      description: "Find clinics on a map or scan a clinic's QR code",
       color: "bg-primary",
     },
     {
@@ -20,9 +20,9 @@ export default function HowItWorks() {
       color: "bg-primary",
     },
     {
-      icon: Ticket,
-      title: "Get Digital Token",
-      description: "Receive your queue number instantly",
+      icon: QrCode,
+      title: "Get Personal QR Token",
+      description: "Receive your personal QR code after joining the queue",
       color: "bg-primary",
     },
     {
@@ -33,8 +33,8 @@ export default function HowItWorks() {
     },
     {
       icon: CheckCircle,
-      title: "Check-in",
-      description: "Arrive at the clinic at the right time",
+      title: "Scan to Check-in",
+      description: "Present your QR code at the clinic for instant check-in",
       color: "bg-success",
     },
   ];
@@ -44,6 +44,12 @@ export default function HowItWorks() {
       icon: LogIn,
       title: "Easy Login",
       description: "Access your admin panel or use WhatsApp bot",
+      color: "bg-secondary",
+    },
+    {
+      icon: ScanLine,
+      title: "Scan Patient QR",
+      description: "Use the admin panel or bot to scan patient QR codes for check-in",
       color: "bg-secondary",
     },
     {
@@ -101,7 +107,7 @@ export default function HowItWorks() {
                 )}
                 data-testid="tab-clinic"
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
+                <Hospital className="h-4 w-4 mr-2" />
                 For Clinics
               </Button>
             </div>
@@ -111,7 +117,7 @@ export default function HowItWorks() {
           <div className="space-y-8">
             <div className={cn(
               "grid gap-6",
-              activeTab === "patient" ? "md:grid-cols-5" : "md:grid-cols-4"
+              "md:grid-cols-5"
             )}>
               {currentSteps.map((step, index) => (
                 <div key={index} className="text-center" data-testid={`step-${activeTab}-${index}`}>

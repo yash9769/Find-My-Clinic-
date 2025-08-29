@@ -100,7 +100,7 @@ export default function Clinics() {
     },
     {
       title: "QR Code System",
-      description: "Physical standees for patients who prefer walk-in registration.",
+      description: "Provide a public QR for discovery and scan patients' personal QR codes for secure, instant check-in.",
       checked: true,
     },
   ];

@@ -21,8 +21,8 @@ export default function Hero() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              Stop Waiting,<br />
-              <span className="text-primary">Start Healing</span>
+              In need of care?<br />
+              <span className="text-primary">We'll get you there.</span>
             </h2>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
               Find nearby clinics, view real-time wait times, and join queues digitally. 
@@ -57,8 +57,8 @@ export default function Hero() {
           {/* Hero Visual */}
           <div className="relative">
             <img 
-              src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=600" 
-              alt="Modern clinic waiting room with comfortable seating" 
+              src="/images/healthcare-patient-doctor.png" 
+              alt="Doctor helping and caring for a patient in healthcare setting" 
               className="rounded-2xl shadow-2xl w-full object-cover h-[400px]"
             />
             
@@ -79,7 +79,7 @@ export default function Hero() {
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-secondary" data-testid="stat-patients">
-                    {stats?.patientsServed || 0}+
+                    {stats?.patientsServed || "50"}+
                   </div>
                   <div className="text-sm text-gray-600">Patients Served</div>
                 </div>

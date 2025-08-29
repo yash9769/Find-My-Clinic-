@@ -7,7 +7,7 @@ export default function Features() {
     {
       icon: "qrcode",
       title: "Hybrid QR System",
-      description: "Seamless integration of digital access with physical QR standees at clinics, ensuring accessibility for everyone regardless of tech comfort level.",
+      description: "A dual-QR system: scan a clinic's public QR to join the queue, then use your personal, encrypted QR code for a fast, contactless check-in.",
       badge: "Digital + Physical Access",
       gradient: "from-primary to-secondary",
     },

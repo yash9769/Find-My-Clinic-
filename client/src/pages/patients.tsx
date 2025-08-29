@@ -1,42 +1,47 @@
-import { useState, useCallback } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Search, MapPin, Clock, Users, Plus, Filter, Navigation } from "lucide-react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, MapPin, Clock, Users, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { insertPatientSchema, insertQueueTokenSchema } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
+import { QRCodeSVG } from "qrcode.react";
 import type { Clinic } from "@shared/schema";
-import LocationSelector from "@/components/sections/location-selector";
+import { useDebounce } from "@/hooks/use-debounce";
 
-const patientFormSchema = insertPatientSchema.extend({
-  email: z.string().email().optional().or(z.literal("")),
-});
+// --- Configuration for Google Form ---
+// 1. Replace this with your actual Google Form URL.
+const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd1sQ0WztxMLEaYy4mRPK8aZw3Yqx_N4M-hw3YGJ1i_FkmDrg/viewform";
+// 2. Replace this with the entry ID for your "Clinic Name" field in the Google Form.
+const CLINIC_NAME_ENTRY_ID = "entry.YOUR_CLINIC_NAME_FIELD_ID";
+// For instructions on how to get these values, see: https://support.google.com/docs/answer/160000
+// -----------------------------------------
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "open": return "bg-success text-success-foreground";
+    case "busy": return "bg-yellow-500 text-white";
+    case "closed": return "bg-destructive text-destructive-foreground";
+    default: return "bg-gray-500 text-white";
+  }
+};
 
 export default function Patients() {
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
-  const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { toast } = useToast();
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
 
   const { data: clinics = [], isLoading } = useQuery({
-    queryKey: ["/api/clinics", searchQuery, selectedArea],
+    queryKey: ["/api/clinics", debouncedSearchQuery, selectedArea],
     queryFn: async () => {
       let url = "/api/clinics";
       const params = new URLSearchParams();
       
-      if (searchQuery) {
-        params.append("search", searchQuery);
+      if (debouncedSearchQuery) {
+        params.append("search", debouncedSearchQuery);
       }
       if (selectedArea) {
         params.append("area", selectedArea);
@@ -52,73 +57,9 @@ export default function Patients() {
     },
   });
 
-  const form = useForm<z.infer<typeof patientFormSchema>>({
-    resolver: zodResolver(patientFormSchema),
-    defaultValues: {
-      name: "",
-      phone: "",
-      email: "",
-    },
-  });
-
-  const createPatientMutation = useMutation({
-    mutationFn: async (patientData: z.infer<typeof patientFormSchema>) => {
-      const response = await apiRequest("POST", "/api/patients", patientData);
-      return response.json();
-    },
-  });
-
-  const joinQueueMutation = useMutation({
-    mutationFn: async ({ clinicId, patientId }: { clinicId: string; patientId: string }) => {
-      const response = await apiRequest("POST", `/api/clinics/${clinicId}/queue`, {
-        patientId,
-        estimatedWaitTime: selectedClinic?.currentWaitTime || 0,
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clinics"] });
-      setIsDialogOpen(false);
-      form.reset();
-      toast({
-        title: "Queue Joined Successfully!",
-        description: `You've been added to the queue at ${selectedClinic?.name}. You'll receive notifications when it's your turn.`,
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to join the queue. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSubmit = async (data: z.infer<typeof patientFormSchema>) => {
-    if (!selectedClinic) return;
-
-    try {
-      const patient = await createPatientMutation.mutateAsync(data);
-      await joinQueueMutation.mutateAsync({
-        clinicId: selectedClinic.id,
-        patientId: patient.id,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create patient or join queue. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "open": return "bg-success text-success-foreground";
-      case "busy": return "bg-yellow-500 text-white";
-      case "closed": return "bg-destructive text-destructive-foreground";
-      default: return "bg-gray-500 text-white";
-    }
+  const handleOpenQrDialog = (clinic: Clinic) => {
+    setSelectedClinic(clinic);
+    setIsQrDialogOpen(true);
   };
 
   return (
@@ -210,91 +151,48 @@ export default function Patients() {
                       </div>
                     </div>
                     
-                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          className="w-full bg-accent hover:bg-orange-600 text-white"
-                          onClick={() => setSelectedClinic(clinic)}
-                          disabled={clinic.status === "closed"}
-                          data-testid={`button-join-queue-${clinic.id}`}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Join Queue
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Join Queue at {selectedClinic?.name}</DialogTitle>
-                        </DialogHeader>
-                        <Form {...form}>
-                          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                            <FormField
-                              control={form.control}
-                              name="name"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Full Name</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="Enter your full name" {...field} data-testid="input-patient-name" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="phone"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Phone Number</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="Enter your phone number" {...field} data-testid="input-patient-phone" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="email"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Email (Optional)</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="Enter your email" {...field} data-testid="input-patient-email" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <div className="flex gap-3 pt-4">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setIsDialogOpen(false)}
-                                className="flex-1"
-                                data-testid="button-cancel-queue"
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                type="submit"
-                                className="flex-1 bg-primary hover:bg-primary/90"
-                                disabled={form.formState.isSubmitting || joinQueueMutation.isPending}
-                                data-testid="button-confirm-queue"
-                              >
-                                {form.formState.isSubmitting || joinQueueMutation.isPending ? "Joining..." : "Join Queue"}
-                              </Button>
-                            </div>
-                          </form>
-                        </Form>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      className="w-full bg-accent hover:bg-orange-600 text-white"
+                      onClick={() => handleOpenQrDialog(clinic)}
+                      disabled={clinic.status === "closed"}
+                      data-testid={`button-join-queue-${clinic.id}`}
+                    >
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Join Queue
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
             </div>
           )}
+
+          <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Scan to Join Queue</DialogTitle>
+              </DialogHeader>
+              {selectedClinic && (
+                <div className="text-center py-4">
+                  <p className="text-gray-600 mb-4">
+                    Scan this QR code with your phone to join the queue for {selectedClinic.name}.
+                  </p>
+                  <div className="bg-white p-4 rounded-lg inline-block shadow-md border">
+                    <QRCodeSVG
+                      value={`${GOOGLE_FORM_URL}?usp=pp_url&${CLINIC_NAME_ENTRY_ID}=${encodeURIComponent(
+                        selectedClinic.name,
+                      )}`}
+                      size={192}
+                    />
+                  </div>
+                  <div className="mt-4 text-left bg-gray-50 p-3 rounded-lg border">
+                    <p className="text-sm"><span className="font-semibold">Clinic:</span> {selectedClinic.name}</p>
+                    <p className="text-sm"><span className="font-semibold">Location:</span> {selectedClinic.address}</p>
+                  </div>
+                </div>
+              )}
+              <Button onClick={() => setIsQrDialogOpen(false)} className="w-full">Close</Button>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>

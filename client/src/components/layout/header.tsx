@@ -1,11 +1,27 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, MapPin, Stethoscope } from "lucide-react";
+import { Menu, X, MapPin, Stethoscope, User, LogOut, QrCode, AlertTriangle, Ambulance } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-export default function Header() {
+interface HeaderProps {
+  isAuthenticated?: boolean;
+  userInfo?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+  } | null;
+  onLogout?: () => void;
+  onShowQRCode?: () => void;
+  onEmergencyAccess?: () => void;
+  onAmbulanceRequest?: () => void;
+}
+
+export default function Header({ isAuthenticated = false, userInfo, onLogout, onShowQRCode, onEmergencyAccess, onAmbulanceRequest }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [location] = useLocation();
 
@@ -15,6 +31,13 @@ export default function Header() {
     { name: "For Clinics", href: "/clinics" },
     { name: "About", href: "/about" },
   ];
+
+  const getUserInitials = () => {
+    if (userInfo) {
+      return `${userInfo.firstName.charAt(0)}${userInfo.lastName.charAt(0)}`;
+    }
+    return "U";
+  };
 
   return (
     <nav className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-50">
@@ -47,13 +70,58 @@ export default function Header() {
                 {item.name}
               </Link>
             ))}
+            
             <div className="flex items-center space-x-3">
               <ThemeToggle />
-              <Link href="/patients">
-                <Button className="bg-accent text-white hover:bg-orange-600" data-testid="button-find-clinic">
-                  Find a Clinic
-                </Button>
-              </Link>
+              
+              {isAuthenticated && userInfo ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-primary text-white">
+                          {getUserInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end">
+                    <div className="flex flex-col space-y-1 p-2">
+                      <p className="text-sm font-medium">{userInfo.firstName} {userInfo.lastName}</p>
+                      <p className="text-xs text-muted-foreground">{userInfo.email}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onShowQRCode}>
+                      <QrCode className="mr-2 h-4 w-4" />
+                      <span>My QR Code</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onEmergencyAccess} className="text-red-600">
+                      <AlertTriangle className="mr-2 h-4 w-4" />
+                      <span>Emergency Services</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onAmbulanceRequest} className="text-blue-600">
+                      <Ambulance className="mr-2 h-4 w-4" />
+                      <span>Request Ambulance</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link href="/patients">
+                  <Button className="bg-accent text-white hover:bg-orange-600" data-testid="button-find-clinic">
+                    Find a Clinic
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -89,14 +157,52 @@ export default function Header() {
                   {item.name}
                 </Link>
               ))}
+              
               <div className="flex items-center justify-center mt-4">
                 <ThemeToggle />
               </div>
-              <Link href="/patients" onClick={() => setIsMenuOpen(false)}>
-                <Button className="w-full bg-accent text-white hover:bg-orange-600 mt-4" data-testid="mobile-button-find-clinic">
-                  Find a Clinic
-                </Button>
-              </Link>
+              
+              {isAuthenticated && userInfo ? (
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center space-x-3 p-2 border rounded-lg">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary text-white text-sm">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{userInfo.firstName} {userInfo.lastName}</p>
+                      <p className="text-xs text-muted-foreground">{userInfo.email}</p>
+                    </div>
+                  </div>
+                  <Button variant="outline" className="w-full" onClick={() => setIsMenuOpen(false)}>
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={() => { onShowQRCode?.(); setIsMenuOpen(false); }}>
+                    <QrCode className="mr-2 h-4 w-4" />
+                    My QR Code
+                  </Button>
+                  <Button variant="outline" className="w-full text-red-600 border-red-200 hover:bg-red-50" onClick={() => { onEmergencyAccess?.(); setIsMenuOpen(false); }}>
+                    <AlertTriangle className="mr-2 h-4 w-4" />
+                    Emergency Services
+                  </Button>
+                  <Button variant="outline" className="w-full text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => { onAmbulanceRequest?.(); setIsMenuOpen(false); }}>
+                    <Ambulance className="mr-2 h-4 w-4" />
+                    Request Ambulance
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={() => { onLogout?.(); setIsMenuOpen(false); }}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                  </Button>
+                </div>
+              ) : (
+                <Link href="/patients" onClick={() => setIsMenuOpen(false)}>
+                  <Button className="w-full bg-accent text-white hover:bg-orange-600 mt-4" data-testid="mobile-button-find-clinic">
+                    Find a Clinic
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         )}

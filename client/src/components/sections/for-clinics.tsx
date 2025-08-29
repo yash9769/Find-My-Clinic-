@@ -3,28 +3,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 
-export default function ForClinics() {
-  const benefits = [
-    {
-      icon: TrendingUp,
-      title: "Efficient Digital Management",
-      description: "Simple admin panel or WhatsApp bot integration for seamless queue management without complex training.",
-      color: "bg-primary",
-    },
-    {
-      icon: Users,
-      title: "Reduced Staff Burnout",
-      description: "Eliminate manual queue management stress and reduce administrative chaos with automated patient flow.",
-      color: "bg-success",
-    },
-    {
-      icon: Settings,
-      title: "Better Resource Allocation",
-      description: "Optimize staff scheduling and improve operational efficiency with predictive patient flow data.",
-      color: "bg-secondary",
-    },
-  ];
+const benefits = [
+  {
+    icon: TrendingUp,
+    title: "Efficient Digital Management",
+    description: "Simple admin panel or WhatsApp bot to manage queues, update wait times, and scan patient QR codes for instant check-in.",
+    color: "bg-primary",
+  },
+  {
+    icon: Users,
+    title: "Reduced Staff Burnout",
+    description: "Eliminate manual queue management stress and reduce administrative chaos with automated patient flow.",
+    color: "bg-success",
+  },
+  {
+    icon: Settings,
+    title: "Better Resource Allocation",
+    description: "Optimize staff scheduling and improve operational efficiency with predictive patient flow data.",
+    color: "bg-secondary",
+  },
+];
 
+export default function ForClinics() {
   return (
     <section id="clinics" className="py-20 bg-gradient-to-br from-secondary/10 to-white">
       <div className="container mx-auto px-4">
@@ -44,8 +44,8 @@ export default function ForClinics() {
             </div>
             
             <div className="space-y-6">
-              {benefits.map((benefit, index) => (
-                <Card key={index} className="bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow" data-testid={`clinic-benefit-${index}`}>
+              {benefits.map((benefit) => (
+                <Card key={benefit.title} className="bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow" data-testid={`clinic-benefit-${benefit.title.toLowerCase().replace(/\s+/g, '-')}`}>
                   <CardContent className="p-6">
                     <div className="flex items-start space-x-4">
                       <div className={`w-10 h-10 ${benefit.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
