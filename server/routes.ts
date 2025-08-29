@@ -307,6 +307,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Queue management endpoints
+  app.post("/api/queue/join", async (req, res) => {
+    try {
+      const { clinicId, patientName, phone, email, reason } = req.body;
+      
+      if (!clinicId || !patientName || !phone || !reason) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Get clinic info
+      const clinic = await storage.getClinic(clinicId);
+      if (!clinic) {
+        return res.status(404).json({ message: "Clinic not found" });
+      }
+      
+      if (clinic.status === "closed") {
+        return res.status(400).json({ message: "Clinic is currently closed" });
+      }
+      
+      // Create queue token
+      const tokenData = {
+        clinicId,
+        patientName,
+        phone,
+        email: email || null,
+        visitReason: reason,
+        status: "waiting" as const,
+        priority: "normal" as const,
+      };
+      
+      const queueToken = await storage.createQueueToken(tokenData);
+      
+      // Calculate position and estimated wait time
+      const queueTokens = await storage.getQueueTokens(clinicId);
+      const activeTokens = queueTokens.filter(token => 
+        token.status === "waiting" || token.status === "called"
+      );
+      const position = activeTokens.findIndex(token => token.id === queueToken.id) + 1;
+      const estimatedWaitTime = Math.max(5, position * 10); // Rough estimate: 10 min per patient
+      
+      // Update clinic queue size
+      await storage.updateClinic(clinicId, {
+        queueSize: activeTokens.length,
+        currentWaitTime: estimatedWaitTime
+      });
+      
+      res.json({
+        tokenId: queueToken.id,
+        position,
+        estimatedWaitTime,
+        patientName: queueToken.patientName,
+        clinicName: clinic.name,
+        status: queueToken.status
+      });
+    } catch (error) {
+      console.error("Error joining queue:", error);
+      res.status(500).json({ message: "Failed to join queue" });
+    }
+  });
+
   app.post("/api/qr-codes/scan", async (req, res) => {
     try {
       if (!(req as any).session.userId) {

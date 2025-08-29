@@ -57,7 +57,7 @@ function Router({ isAuthenticated, userInfo, onEmergencyAccess, onAmbulanceReque
           )}
         </div>
       )} />
-      <Route path="/patients" component={Patients} />
+      <Route path="/patients" component={() => <Patients isAuthenticated={isAuthenticated} userInfo={userInfo} />} />
       <Route path="/clinics" component={Clinics} />
       <Route path="/about" component={About} />
       <Route component={NotFound} />
@@ -135,6 +135,13 @@ function App() {
 
   const handleShowQRCode = () => {
     setAppState('patient-qr');
+  };
+
+  const handleProfile = () => {
+    // For now, show the patient info form to edit profile
+    if (userInfo) {
+      setAppState('patient-info');
+    }
   };
 
   const handleQRCodeBack = () => {
@@ -288,6 +295,7 @@ function App() {
               isAuthenticated={isAuthenticated} 
               userInfo={userInfo} 
               onLogout={handleLogout}
+              onProfile={handleProfile}
               onShowQRCode={handleShowQRCode}
               onEmergencyAccess={handleEmergencyAccess}
               onAmbulanceRequest={handleAmbulanceFromApp}

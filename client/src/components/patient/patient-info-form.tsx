@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { User, Calendar, MapPin, Heart, AlertTriangle, Plus, X } from "lucide-react";
+import { User, Calendar, MapPin, Heart, AlertTriangle, Plus, X, Phone, Home, IdCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,23 +13,44 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
 const patientInfoSchema = z.object({
+  // Personal Information
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.string().min(1, "Please select your gender"),
   bloodType: z.string().optional(),
   height: z.string().optional(),
   weight: z.string().optional(),
+  
+  // Contact & Address Information
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
   zipCode: z.string().min(5, "Valid zip code is required"),
+  
+  // Emergency Contact
   emergencyContactName: z.string().min(1, "Emergency contact name is required"),
   emergencyContactPhone: z.string().min(10, "Valid phone number is required"),
   emergencyContactRelation: z.string().min(1, "Relationship is required"),
+  
+  // Medical Information
   allergies: z.array(z.string()).optional(),
   medications: z.array(z.string()).optional(),
   medicalConditions: z.array(z.string()).optional(),
+  
+  // Insurance Information
   insuranceProvider: z.string().optional(),
   insurancePolicyNumber: z.string().optional(),
+  insuranceGroupNumber: z.string().optional(),
+  
+  // Additional Information for Receptionist
+  primaryPhysician: z.string().optional(),
+  preferredLanguage: z.string().min(1, "Preferred language is required"),
+  occupation: z.string().optional(),
+  maritalStatus: z.string().optional(),
+  
+  // Consent and Notes
+  photoConsent: z.boolean().default(true),
+  smsConsent: z.boolean().default(true),
+  emailConsent: z.boolean().default(true),
   additionalNotes: z.string().optional(),
 });
 
@@ -42,6 +63,7 @@ interface PatientInfoFormProps {
     lastName: string;
     email: string;
     phone: string;
+    [key: string]: any; // For existing patient data
   };
 }
 
@@ -61,11 +83,93 @@ export default function PatientInfoForm({ onComplete, userInfo }: PatientInfoFor
     setValue,
     watch,
     trigger,
+    reset,
   } = useForm<PatientInfoData>({
     resolver: zodResolver(patientInfoSchema),
   });
 
-  const totalSteps = 4;
+  const totalSteps = 6;
+
+  // Calculate actual completion percentage based on filled fields
+  const calculateCompletionPercentage = () => {
+    const watchedValues = watch();
+    const requiredFields = [
+      'dateOfBirth', 'gender', 'address', 'city', 'state', 'zipCode',
+      'emergencyContactName', 'emergencyContactPhone', 'emergencyContactRelation',
+      'preferredLanguage'
+    ];
+    
+    const optionalFields = [
+      'bloodType', 'height', 'weight', 'occupation', 'maritalStatus',
+      'insuranceProvider', 'insurancePolicyNumber', 'insuranceGroupNumber',
+      'primaryPhysician', 'additionalNotes'
+    ];
+    
+    let filledRequired = 0;
+    let filledOptional = 0;
+    
+    // Count filled required fields
+    requiredFields.forEach(field => {
+      if (watchedValues[field as keyof PatientInfoData] && 
+          String(watchedValues[field as keyof PatientInfoData]).trim() !== '') {
+        filledRequired++;
+      }
+    });
+    
+    // Count filled optional fields
+    optionalFields.forEach(field => {
+      if (watchedValues[field as keyof PatientInfoData] && 
+          String(watchedValues[field as keyof PatientInfoData]).trim() !== '') {
+        filledOptional++;
+      }
+    });
+    
+    // Count medical arrays
+    const medicalArrays = [allergies, medications, medicalConditions];
+    const filledArrays = medicalArrays.filter(arr => arr.length > 0).length;
+    
+    // Weight: Required fields = 70%, Optional fields = 20%, Medical arrays = 10%
+    const requiredPercentage = (filledRequired / requiredFields.length) * 70;
+    const optionalPercentage = (filledOptional / optionalFields.length) * 20;
+    const arrayPercentage = (filledArrays / medicalArrays.length) * 10;
+    
+    return Math.round(requiredPercentage + optionalPercentage + arrayPercentage);
+  };
+
+  // Initialize form with existing data
+  useEffect(() => {
+    if (userInfo) {
+      // Set existing allergies, medications, and conditions
+      if (userInfo.allergies && Array.isArray(userInfo.allergies)) {
+        setAllergies(userInfo.allergies);
+        setValue('allergies', userInfo.allergies);
+      }
+      if (userInfo.medications && Array.isArray(userInfo.medications)) {
+        setMedications(userInfo.medications);
+        setValue('medications', userInfo.medications);
+      }
+      if (userInfo.medicalConditions && Array.isArray(userInfo.medicalConditions)) {
+        setMedicalConditions(userInfo.medicalConditions);
+        setValue('medicalConditions', userInfo.medicalConditions);
+      }
+      
+      // Set all other form fields
+      const fieldsToSet = [
+        'dateOfBirth', 'gender', 'bloodType', 'height', 'weight',
+        'address', 'city', 'state', 'zipCode',
+        'emergencyContactName', 'emergencyContactPhone', 'emergencyContactRelation',
+        'preferredLanguage', 'occupation', 'maritalStatus',
+        'insuranceProvider', 'insurancePolicyNumber', 'insuranceGroupNumber',
+        'primaryPhysician', 'photoConsent', 'smsConsent', 'emailConsent', 'additionalNotes'
+      ];
+      
+      fieldsToSet.forEach(field => {
+        if (userInfo[field] !== undefined) {
+          setValue(field as keyof PatientInfoData, userInfo[field]);
+        }
+      });
+    }
+  }, [userInfo, setValue]);
 
   const addItem = (type: 'allergy' | 'medication' | 'condition') => {
     switch (type) {
@@ -139,7 +243,11 @@ export default function PatientInfoForm({ onComplete, userInfo }: PatientInfoFor
       case 3:
         return ['emergencyContactName', 'emergencyContactPhone', 'emergencyContactRelation'] as (keyof PatientInfoData)[];
       case 4:
-        return [] as (keyof PatientInfoData)[];
+        return ['preferredLanguage', 'occupation', 'maritalStatus'] as (keyof PatientInfoData)[];
+      case 5:
+        return ['insuranceProvider', 'insurancePolicyNumber', 'primaryPhysician'] as (keyof PatientInfoData)[];
+      case 6:
+        return [] as (keyof PatientInfoData)[]; // Medical info and consents - optional
       default:
         return [] as (keyof PatientInfoData)[];
     }
@@ -176,7 +284,7 @@ export default function PatientInfoForm({ onComplete, userInfo }: PatientInfoFor
 
               <div className="space-y-2">
                 <Label htmlFor="gender">Gender</Label>
-                <Select onValueChange={(value) => setValue("gender", value)}>
+                <Select onValueChange={(value) => setValue("gender", value)} value={watch("gender")}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
@@ -194,7 +302,7 @@ export default function PatientInfoForm({ onComplete, userInfo }: PatientInfoFor
 
               <div className="space-y-2">
                 <Label htmlFor="bloodType">Blood Type (Optional)</Label>
-                <Select onValueChange={(value) => setValue("bloodType", value)}>
+                <Select onValueChange={(value) => setValue("bloodType", value)} value={watch("bloodType")}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select blood type" />
                   </SelectTrigger>
@@ -324,7 +432,7 @@ export default function PatientInfoForm({ onComplete, userInfo }: PatientInfoFor
 
                 <div className="space-y-2">
                   <Label htmlFor="emergencyContactRelation">Relationship</Label>
-                  <Select onValueChange={(value) => setValue("emergencyContactRelation", value)}>
+                  <Select onValueChange={(value) => setValue("emergencyContactRelation", value)} value={watch("emergencyContactRelation")}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select relationship" />
                     </SelectTrigger>
@@ -348,8 +456,109 @@ export default function PatientInfoForm({ onComplete, userInfo }: PatientInfoFor
 
       case 4:
         return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Details</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="preferredLanguage">Preferred Language</Label>
+                <Select onValueChange={(value) => setValue("preferredLanguage", value)} value={watch("preferredLanguage")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="english">English</SelectItem>
+                    <SelectItem value="spanish">Spanish</SelectItem>
+                    <SelectItem value="french">French</SelectItem>
+                    <SelectItem value="chinese">Chinese</SelectItem>
+                    <SelectItem value="arabic">Arabic</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.preferredLanguage && (
+                  <p className="text-sm text-red-600">{errors.preferredLanguage.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="maritalStatus">Marital Status</Label>
+                <Select onValueChange={(value) => setValue("maritalStatus", value)} value={watch("maritalStatus")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single</SelectItem>
+                    <SelectItem value="married">Married</SelectItem>
+                    <SelectItem value="divorced">Divorced</SelectItem>
+                    <SelectItem value="widowed">Widowed</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="occupation">Occupation (Optional)</Label>
+                <Input
+                  id="occupation"
+                  placeholder="Your profession or job title"
+                  {...register("occupation")}
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 5:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Insurance & Healthcare Provider</h3>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="insuranceProvider">Insurance Provider (Optional)</Label>
+                <Input
+                  id="insuranceProvider"
+                  placeholder="e.g., Blue Cross Blue Shield, Aetna"
+                  {...register("insuranceProvider")}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="insurancePolicyNumber">Policy Number (Optional)</Label>
+                  <Input
+                    id="insurancePolicyNumber"
+                    placeholder="Policy number"
+                    {...register("insurancePolicyNumber")}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="insuranceGroupNumber">Group Number (Optional)</Label>
+                  <Input
+                    id="insuranceGroupNumber"
+                    placeholder="Group number"
+                    {...register("insuranceGroupNumber")}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="primaryPhysician">Primary Physician (Optional)</Label>
+                <Input
+                  id="primaryPhysician"
+                  placeholder="Dr. Smith, Family Medicine"
+                  {...register("primaryPhysician")}
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 6:
+        return (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Medical Information</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Medical Information & Consents</h3>
             
             {/* Allergies */}
             <div className="space-y-3">
@@ -441,24 +650,40 @@ export default function PatientInfoForm({ onComplete, userInfo }: PatientInfoFor
               </div>
             </div>
 
-            {/* Insurance Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="insuranceProvider">Insurance Provider (Optional)</Label>
-                <Input
-                  id="insuranceProvider"
-                  placeholder="e.g., Blue Cross Blue Shield"
-                  {...register("insuranceProvider")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="insurancePolicyNumber">Policy Number (Optional)</Label>
-                <Input
-                  id="insurancePolicyNumber"
-                  placeholder="Policy number"
-                  {...register("insurancePolicyNumber")}
-                />
+            {/* Consent Forms */}
+            <div className="space-y-4 border-t pt-6">
+              <h4 className="font-semibold text-gray-900">Communication Preferences</h4>
+              
+              <div className="space-y-3">
+                <label className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    {...register("photoConsent")}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">Allow photo identification for medical records</span>
+                </label>
+                
+                <label className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    {...register("smsConsent")}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">Receive SMS notifications for appointments and reminders</span>
+                </label>
+                
+                <label className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    {...register("emailConsent")}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">Receive email updates about your health records</span>
+                </label>
               </div>
             </div>
 
@@ -467,11 +692,28 @@ export default function PatientInfoForm({ onComplete, userInfo }: PatientInfoFor
               <Label htmlFor="additionalNotes">Additional Notes (Optional)</Label>
               <Textarea
                 id="additionalNotes"
-                placeholder="Any additional medical information or special instructions..."
+                placeholder="Any additional medical information, special instructions, or concerns you'd like to share with healthcare providers..."
                 {...register("additionalNotes")}
-                rows={3}
+                rows={4}
               />
             </div>
+
+            {/* Important Notice */}
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 className="font-semibold text-blue-900 mb-2">📋 For Receptionist Reference</h4>
+              <p className="text-sm text-blue-800 mb-2">
+                This comprehensive profile enables receptionists to:
+              </p>
+              <ul className="text-sm text-blue-800 space-y-1 ml-4">
+                <li>• Quickly access your information via QR code scanning</li>
+                <li>• Verify your identity and contact details</li>
+                <li>• Check insurance and medical history instantly</li>
+                <li>• Prepare for your visit with relevant information</li>
+                <li>• Ensure faster, more efficient check-in process</li>
+              </ul>
+            </div>
+            
+
           </div>
         );
 
@@ -504,13 +746,13 @@ export default function PatientInfoForm({ onComplete, userInfo }: PatientInfoFor
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-600">Step {currentStep} of {totalSteps}</span>
-            <span className="text-sm text-gray-600">{Math.round((currentStep / totalSteps) * 100)}% Complete</span>
+            <span className="text-sm text-gray-600">{calculateCompletionPercentage()}% Complete</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <motion.div
               className="bg-primary h-2 rounded-full"
               initial={{ width: 0 }}
-              animate={{ width: `${(currentStep / totalSteps) * 100}%` }}
+              animate={{ width: `${calculateCompletionPercentage()}%` }}
               transition={{ duration: 0.5 }}
             />
           </div>

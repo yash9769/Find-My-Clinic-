@@ -1,22 +1,25 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Search, MapPin, Clock, Users, QrCode } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Search, MapPin, Clock, Users, Phone, Mail, UserPlus, QrCode } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { QRCodeSVG } from "qrcode.react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { Clinic } from "@shared/schema";
 import { useDebounce } from "@/hooks/use-debounce";
 
-// --- Configuration for Google Form ---
-// 1. Replace this with your actual Google Form URL.
-const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd1sQ0WztxMLEaYy4mRPK8aZw3Yqx_N4M-hw3YGJ1i_FkmDrg/viewform";
-// 2. Replace this with the entry ID for your "Clinic Name" field in the Google Form.
-const CLINIC_NAME_ENTRY_ID = "entry.YOUR_CLINIC_NAME_FIELD_ID";
-// For instructions on how to get these values, see: https://support.google.com/docs/answer/160000
-// -----------------------------------------
+interface PatientsProps {
+  isAuthenticated?: boolean;
+  userInfo?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+  } | null;
+}
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -27,13 +30,54 @@ const getStatusColor = (status: string) => {
   }
 };
 
-export default function Patients() {
+export default function Patients({ isAuthenticated = false, userInfo }: PatientsProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
-  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
-
+  const [joinQueueData, setJoinQueueData] = useState({
+    patientName: userInfo ? `${userInfo.firstName} ${userInfo.lastName}` : '',
+    phone: userInfo?.phone || '',
+    email: userInfo?.email || '',
+    reason: ''
+  });
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+  
+  const queryClient = useQueryClient();
+  
+  const joinQueueMutation = useMutation({
+    mutationFn: async (data: { clinicId: string; patientName: string; phone: string; email: string; reason: string }) => {
+      const response = await fetch('/api/queue/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to join queue');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clinics'] });
+      setIsJoinDialogOpen(false);
+      alert(`Successfully joined queue! Your position: ${data.position}. Estimated wait time: ${data.estimatedWaitTime} minutes.`);
+    },
+    onError: (error) => {
+      alert('Failed to join queue. Please try again.');
+    },
+  });
+  
+  const handleJoinQueue = (clinic: Clinic) => {
+    setSelectedClinic(clinic);
+    setIsJoinDialogOpen(true);
+  };
+  
+  const handleSubmitJoinQueue = () => {
+    if (selectedClinic && joinQueueData.patientName && joinQueueData.phone && joinQueueData.reason) {
+      joinQueueMutation.mutate({
+        clinicId: selectedClinic.id,
+        ...joinQueueData,
+      });
+    }
+  };
   const { data: clinics = [], isLoading } = useQuery({
     queryKey: ["/api/clinics", debouncedSearchQuery, selectedArea],
     queryFn: async () => {
@@ -56,11 +100,6 @@ export default function Patients() {
       return response.json();
     },
   });
-
-  const handleOpenQrDialog = (clinic: Clinic) => {
-    setSelectedClinic(clinic);
-    setIsQrDialogOpen(true);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -132,68 +171,144 @@ export default function Patients() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="text-center">
-                          <div className="flex items-center text-lg font-bold text-primary">
-                            <Clock className="h-4 w-4 mr-1" />
-                            <span data-testid={`clinic-wait-time-${clinic.id}`}>{clinic.currentWaitTime} min</span>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-4">
+                          <div className="text-center">
+                            <div className="flex items-center text-lg font-bold text-primary">
+                              <Clock className="h-4 w-4 mr-1" />
+                              <span data-testid={`clinic-wait-time-${clinic.id}`}>{clinic.currentWaitTime} min</span>
+                            </div>
+                            <div className="text-xs text-gray-500">Wait Time</div>
                           </div>
-                          <div className="text-xs text-gray-500">Wait Time</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="flex items-center text-lg font-bold text-secondary">
-                            <Users className="h-4 w-4 mr-1" />
-                            <span data-testid={`clinic-queue-size-${clinic.id}`}>{clinic.queueSize}</span>
+                          <div className="text-center">
+                            <div className="flex items-center text-lg font-bold text-secondary">
+                              <Users className="h-4 w-4 mr-1" />
+                              <span data-testid={`clinic-queue-size-${clinic.id}`}>{clinic.queueSize}</span>
+                            </div>
+                            <div className="text-xs text-gray-500">In Queue</div>
                           </div>
-                          <div className="text-xs text-gray-500">In Queue</div>
                         </div>
                       </div>
+                      
+                      {/* Action Buttons */}
+                      {isAuthenticated && clinic.status === 'open' ? (
+                        <div className="space-y-3">
+                          <Button 
+                            onClick={() => handleJoinQueue(clinic)}
+                            className="w-full bg-primary hover:bg-primary/90 text-white"
+                            disabled={clinic.status !== 'open'}
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Join Queue
+                          </Button>
+                          
+                          {/* Contact Information */}
+                          <div className="space-y-2 border-t pt-3">
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Phone className="h-4 w-4 mr-2" />
+                              <span>Call: {clinic.phone || 'Not available'}</span>
+                            </div>
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Mail className="h-4 w-4 mr-2" />
+                              <span>Walk-in service available</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>                      
+                          {/* Contact Information for non-authenticated users */}
+                          <div className="space-y-2 border-t pt-4">
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Phone className="h-4 w-4 mr-2" />
+                              <span>Call to book appointment</span>
+                            </div>
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Mail className="h-4 w-4 mr-2" />
+                              <span>Visit in person for walk-in service</span>
+                            </div>
+                          </div>
+                          
+                          <div className="text-center text-sm text-gray-500 bg-blue-50 p-3 rounded-lg">
+                            <strong>Note:</strong> {isAuthenticated ? 'Complete your profile for faster check-in with receptionist' : 'Login to join queue digitally'}
+                          </div>
+                        </>
+                      )}
                     </div>
-                    
-                    <Button
-                      className="w-full bg-accent hover:bg-orange-600 text-white"
-                      onClick={() => handleOpenQrDialog(clinic)}
-                      disabled={clinic.status === "closed"}
-                      data-testid={`button-join-queue-${clinic.id}`}
-                    >
-                      <QrCode className="h-4 w-4 mr-2" />
-                      Join Queue
-                    </Button>
                   </CardContent>
                 </Card>
               ))}
             </div>
           )}
-
-          <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Scan to Join Queue</DialogTitle>
-              </DialogHeader>
-              {selectedClinic && (
-                <div className="text-center py-4">
-                  <p className="text-gray-600 mb-4">
-                    Scan this QR code with your phone to join the queue for {selectedClinic.name}.
-                  </p>
-                  <div className="bg-white p-4 rounded-lg inline-block shadow-md border">
-                    <QRCodeSVG
-                      value={`${GOOGLE_FORM_URL}?usp=pp_url&${CLINIC_NAME_ENTRY_ID}=${encodeURIComponent(
-                        selectedClinic.name,
-                      )}`}
-                      size={192}
-                    />
-                  </div>
-                  <div className="mt-4 text-left bg-gray-50 p-3 rounded-lg border">
-                    <p className="text-sm"><span className="font-semibold">Clinic:</span> {selectedClinic.name}</p>
-                    <p className="text-sm"><span className="font-semibold">Location:</span> {selectedClinic.address}</p>
-                  </div>
-                </div>
-              )}
-              <Button onClick={() => setIsQrDialogOpen(false)} className="w-full">Close</Button>
-            </DialogContent>
-          </Dialog>
         </div>
+        
+        {/* Join Queue Dialog */}
+        <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Join Queue at {selectedClinic?.name}</DialogTitle>
+              <DialogDescription>
+                Please provide your information to join the queue. You'll receive notifications about your position.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="patientName">Full Name</Label>
+                <Input
+                  id="patientName"
+                  value={joinQueueData.patientName}
+                  onChange={(e) => setJoinQueueData(prev => ({ ...prev, patientName: e.target.value }))}
+                  placeholder="Enter your full name"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  value={joinQueueData.phone}
+                  onChange={(e) => setJoinQueueData(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="Enter your phone number"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email (Optional)</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={joinQueueData.email}
+                  onChange={(e) => setJoinQueueData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="Enter your email"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="reason">Reason for Visit</Label>
+                <Textarea
+                  id="reason"
+                  value={joinQueueData.reason}
+                  onChange={(e) => setJoinQueueData(prev => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Brief description of your visit reason"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-2 mt-6">
+                <Button variant="outline" onClick={() => setIsJoinDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSubmitJoinQueue}
+                  disabled={!joinQueueData.patientName || !joinQueueData.phone || !joinQueueData.reason || joinQueueMutation.isPending}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  {joinQueueMutation.isPending ? 'Joining...' : 'Join Queue'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

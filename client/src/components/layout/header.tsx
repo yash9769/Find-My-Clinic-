@@ -16,12 +16,13 @@ interface HeaderProps {
     phone: string;
   } | null;
   onLogout?: () => void;
+  onProfile?: () => void;
   onShowQRCode?: () => void;
   onEmergencyAccess?: () => void;
   onAmbulanceRequest?: () => void;
 }
 
-export default function Header({ isAuthenticated = false, userInfo, onLogout, onShowQRCode, onEmergencyAccess, onAmbulanceRequest }: HeaderProps) {
+export default function Header({ isAuthenticated = false, userInfo, onLogout, onProfile, onShowQRCode, onEmergencyAccess, onAmbulanceRequest }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [location] = useLocation();
 
@@ -91,7 +92,7 @@ export default function Header({ isAuthenticated = false, userInfo, onLogout, on
                       <p className="text-xs text-muted-foreground">{userInfo.email}</p>
                     </div>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={onProfile}>
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>
@@ -175,7 +176,7 @@ export default function Header({ isAuthenticated = false, userInfo, onLogout, on
                       <p className="text-xs text-muted-foreground">{userInfo.email}</p>
                     </div>
                   </div>
-                  <Button variant="outline" className="w-full" onClick={() => setIsMenuOpen(false)}>
+                  <Button variant="outline" className="w-full" onClick={() => { onProfile?.(); setIsMenuOpen(false); }}>
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </Button>
