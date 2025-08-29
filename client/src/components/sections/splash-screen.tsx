@@ -19,8 +19,15 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
   }, [onComplete]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-white to-secondary/10 flex items-center justify-center">
-      <div className="text-center">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center">
+      {/* Animated Sky Blue Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-sky-200 via-cyan-100 to-blue-200"></div>
+      <div className="absolute inset-0 bg-gradient-to-tr from-sky-300 via-transparent to-cyan-200 opacity-60 animate-pulse" style={{animationDuration: '3s'}}></div>
+      <div className="absolute inset-0 bg-gradient-to-bl from-transparent via-blue-100 to-sky-300 opacity-40 animate-bounce" style={{animationDuration: '5s'}}></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-cyan-200 via-transparent to-sky-200 opacity-30 animate-ping" style={{animationDuration: '7s'}}></div>
+      
+      {/* Content Container */}
+      <div className="relative z-10 text-center">
         {/* Logo Animation */}
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
